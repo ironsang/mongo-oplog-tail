@@ -79,7 +79,8 @@ public class OplogRecord {
 
     @Override
     public String toString() {
-        return "OplogRecord{" +
+        return "OplogRecord{db=" + getDb() +
+                ", collection=" + getCollection() +
                 ", ts=" + ts +
                 ", h=" + h +
                 ", ns='" + ns + '\'' +
