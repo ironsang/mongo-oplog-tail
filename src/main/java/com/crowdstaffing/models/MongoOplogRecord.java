@@ -1,5 +1,6 @@
 package com.crowdstaffing.models;
 
+import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
 
@@ -79,6 +80,12 @@ public class MongoOplogRecord {
         return this.ns.split("\\.")[1];
     }
 
+    public String getObject() {
+        BsonDocument output = new BsonDocument();
+        o.forEach(output::append);
+        return output.toJson();
+    }
+
     @Override
     public String toString() {
         return "com.crowdstaffing.models.MongoOplogRecord{db=" + getDb() +
@@ -86,7 +93,7 @@ public class MongoOplogRecord {
                 ", ts=" + ts +
                 ", h=" + h +
                 ", ns='" + ns + '\'' +
-                ", o=" + o +
+                ", o=" + getObject() +
                 ", op='" + op + '\'' +
                 ", t=" + t +
                 ", v=" + v +
