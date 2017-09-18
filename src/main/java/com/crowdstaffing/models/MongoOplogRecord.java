@@ -1,9 +1,11 @@
+package com.crowdstaffing.models;
+
 import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
 
 import java.util.Map;
 
-public class OplogRecord {
+public class MongoOplogRecord {
 
     private BsonTimestamp ts;
     private Long t;
@@ -79,7 +81,7 @@ public class OplogRecord {
 
     @Override
     public String toString() {
-        return "OplogRecord{db=" + getDb() +
+        return "com.crowdstaffing.models.MongoOplogRecord{db=" + getDb() +
                 ", collection=" + getCollection() +
                 ", ts=" + ts +
                 ", h=" + h +
