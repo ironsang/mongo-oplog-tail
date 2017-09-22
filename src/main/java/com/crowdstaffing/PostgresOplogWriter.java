@@ -7,6 +7,7 @@ import org.postgresql.util.PGobject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Stream;
@@ -16,6 +17,7 @@ import static java.util.stream.Collectors.toList;
 
 public class PostgresOplogWriter {
 
+    public static final ObjectMapper Json = new ObjectMapper();
     private Connection connection;
 
     public PostgresOplogWriter(Connection connection) {
@@ -23,14 +25,15 @@ public class PostgresOplogWriter {
     }
 
     public void write(Stream<MongoOplogRecord> stream) throws Exception {
-        stream.forEach(mongoOplog -> {
-            System.out.println(mongoOplog.toString());
-            writeToDb(mongoOplog);
-            if ("talents".equals(mongoOplog.getCollection())) {
-                writeToTalentsTable(mongoOplog);
-            }
+        stream.filter(mongoOplog -> "crowdstaffing".equals(mongoOplog.getDb()))
+                .forEach(mongoOplog -> {
+                    System.out.println(mongoOplog.toString());
+                    writeToDb(mongoOplog);
+                    /*if ("talents".equals(mongoOplog.getCollection())) {
+                        writeToTalentsTable(mongoOplog);
+                    }*/
 
-        });
+                });
         connection.close();
     }
 
@@ -49,7 +52,7 @@ public class PostgresOplogWriter {
 
             PGobject jsonObject = new PGobject();
             jsonObject.setType("jsonb");
-            jsonObject.setValue(mongoOplog.getObject());
+            jsonObject.setValue(mongoOplog.getOObject());
             preparedStatement.setObject(8, jsonObject);
 
             preparedStatement.execute();
@@ -61,7 +64,31 @@ public class PostgresOplogWriter {
 
     private void writeToTalentsTable(MongoOplogRecord mongoOplog) {
         try {
-            JsonNode talent = new ObjectMapper().readTree(mongoOplog.getObject());
+            JsonNode talent = Json.readTree(mongoOplog.getOObject());
+            JsonNode o2Object = Json.readTree(mongoOplog.getO2Object());
+            if (mongoOplog.isInsert()) {
+                handleInsert(talent);
+            } else if (mongoOplog.isUpdate()) {
+                String talent_id = o2Object.get("_id").get("$oid").asText();
+                if (talent.has("$set")) {
+                    Iterator<String> setFieldNames = talent.get("$set").fieldNames();
+                    String next = setFieldNames.next();
+                    String fieldName = next.split("\\.")[0];
+                    int arrPostition = Integer.parseInt(next.split("\\.")[1]);
+                    String sql = "SELECT * FROM data.talents t WHERE t._id = ?";
+                    PreparedStatement s = connection.prepareStatement(sql);
+                    s.setString(1, talent_id);
+                    ResultSet resultSet = s.executeQuery();
+                    s.close();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleInsert(JsonNode talent) {
+        try {
             String talent_id = talent.get("_id").get("$oid").asText();
             String city = talent.has("city") ? talent.get("city").asText() : null;
             List<String> jobIds = talent.findValues("job_ids").stream().findFirst().map(jn -> {
@@ -85,11 +112,13 @@ public class PostgresOplogWriter {
 
             String sql = "INSERT INTO data.talents (_id, city) VALUES(?, ?)";
             PreparedStatement s = connection.prepareStatement(sql);
+
             s.setString(1, talent_id);
+
             s.setString(2, city);
             s.execute();
             s.close();
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }

@@ -4,6 +4,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class MongoOplogRecord {
@@ -14,7 +15,8 @@ public class MongoOplogRecord {
     private Integer v;
     private String op;
     private String ns;
-    private Map<String, BsonValue> o;
+    private Map<String, BsonValue> o2 = new HashMap<>();
+    private Map<String, BsonValue> o = new HashMap<>();
 
     public BsonTimestamp getTs() {
         return ts;
@@ -46,6 +48,14 @@ public class MongoOplogRecord {
 
     public void setO(Map<String, BsonValue> o) {
         this.o = o;
+    }
+
+    public Map<String, BsonValue> getO2() {
+        return o2;
+    }
+
+    public void setO2(Map<String, BsonValue> o2) {
+        this.o2 = o2;
     }
 
     public String getOp() {
@@ -80,10 +90,28 @@ public class MongoOplogRecord {
         return this.ns.split("\\.")[1];
     }
 
-    public String getObject() {
+    public String getO2Object() {
+        BsonDocument output = new BsonDocument();
+        o2.forEach(output::append);
+        return output.toJson();
+    }
+
+    public String getOObject() {
         BsonDocument output = new BsonDocument();
         o.forEach(output::append);
         return output.toJson();
+    }
+
+    public boolean isInsert() {
+        return "i".equals(op);
+    }
+
+    public boolean isUpdate() {
+        return "u".equals(op);
+    }
+
+    public boolean isDelete() {
+        return "d".equals(op);
     }
 
     @Override
@@ -93,10 +121,11 @@ public class MongoOplogRecord {
                 ", ts=" + ts +
                 ", h=" + h +
                 ", ns='" + ns + '\'' +
-                ", o=" + getObject() +
+                ", o=" + getOObject() +
                 ", op='" + op + '\'' +
                 ", t=" + t +
                 ", v=" + v +
                 '}';
     }
+
 }
